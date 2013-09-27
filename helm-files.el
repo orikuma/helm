@@ -55,10 +55,11 @@
 (define-helm-type-attribute 'file
     `((action
        ("Find file" . helm-find-many-files)
-       ("Find file as root" . helm-find-file-as-root)
+       ,(and (locate-library "elscreen") '("Find file in Elscreen"  . helm-elscreen-find-file))
        ("Find file other window" . find-file-other-window)
        ("Find file other frame" . find-file-other-frame)
-       ("Open dired in file's directory" . helm-open-dired)
+       ("Find file as root" . helm-find-file-as-root)
+       ("Open dired in file's directory" . helm-c-open-dired)
        ("Grep File(s) `C-u recurse'" . helm-find-files-grep)
        ("Zgrep File(s) `C-u Recurse'" . helm-ff-zgrep)
        ("Pdfgrep File(s)" . helm-ff-pdfgrep)
@@ -401,10 +402,10 @@ Don't set it directly, use instead `helm-ff-auto-update-initial-value'.")
     (action
      . ,(delq
          nil
-         `(("Find File" . helm-find-file-or-marked)
-           ("Find file in Dired" . helm-point-file-in-dired)
+         `(("Find File" . helm-c-find-file-or-marked)
            ,(and (locate-library "elscreen")
                  '("Find file in Elscreen"  . helm-elscreen-find-file))
+           ("Find file in Dired" . helm-c-point-file-in-dired)
            ("Checksum File" . helm-ff-checksum)
            ("Complete at point `M-tab'"
             . helm-insert-file-name-completion-at-point)
@@ -2356,6 +2357,8 @@ Else return ACTIONS unmodified."
                     (helm-set-pattern
                      (expand-file-name candidate))
                     (with-helm-after-update-hook (helm-exit-minibuffer))))
+               ,(and (locate-library "elscreen")
+                 '("Find file in Elscreen"  . helm-elscreen-find-file))
                ("Find file in helm"
                 . (lambda (candidate)
                     (helm-set-pattern

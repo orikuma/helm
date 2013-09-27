@@ -148,7 +148,7 @@ second call within 0.5s run `helm-swap-windows'."
     (define-key map (kbd "M-SPC")      'helm-toggle-visible-mark)
     (define-key map (kbd "M-[")        'helm-prev-visible-mark)
     (define-key map (kbd "M-]")        'helm-next-visible-mark)
-    (define-key map (kbd "C-k")        'helm-delete-minibuffer-contents)
+    (define-key map (kbd "M-k")        'helm-delete-minibuffer-contents)
     (define-key map (kbd "C-x C-f")    'helm-quit-and-find-file)
     (define-key map (kbd "M-m")        'helm-toggle-all-marks)
     (define-key map (kbd "M-a")        'helm-mark-all)
@@ -173,7 +173,8 @@ second call within 0.5s run `helm-swap-windows'."
     (define-key map (kbd "C-x b")      'helm-resume-previous-session-after-quit)
     (define-key map (kbd "C-x C-b")    'helm-resume-list-buffers-after-quit)
     ;; Disable `file-cache-minibuffer-complete'.
-    (define-key map (kbd "<C-tab>")    'undefined)
+    ;; (define-key map (kbd "<C-tab>")    'undefined)
+    (define-key map (kbd "<C-tab>")    'helm-execute-persistent-action)
     ;; Multi keys
     (define-key map (kbd "C-t")        'helm-toggle-resplit-and-swap-windows)
     ;; Debugging command

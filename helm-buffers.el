@@ -574,13 +574,13 @@ displayed with the `file-name-shadow' face if available."
 
 (define-helm-type-attribute 'buffer
     `((action
-       ("Switch to buffer" . helm-switch-to-buffer)
+       ("Switch to buffer" . helm-c-switch-to-buffer)
+       ,(and (locate-library "elscreen") '("Display buffer in Elscreen" . helm-find-buffer-on-elscreen))
        ,(and (locate-library "popwin") '("Switch to buffer in popup window" . popwin:popup-buffer))
        ("Switch to buffer other window" . switch-to-buffer-other-window)
        ("Switch to buffer other frame" . switch-to-buffer-other-frame)
-       ,(and (locate-library "elscreen") '("Display buffer in Elscreen" . helm-find-buffer-on-elscreen))
-       ("Query replace regexp" . helm-buffer-query-replace-regexp)
-       ("Query replace" . helm-buffer-query-replace)
+       ("Query replace regexp" . helm-c-buffer-query-replace-regexp)
+       ("Query replace" . helm-c-buffer-query-replace)
        ("View buffer" . view-buffer)
        ("Display buffer"   . display-buffer)
        ("Grep buffers (C-u grep all buffers)" . helm-zgrep-buffers)
