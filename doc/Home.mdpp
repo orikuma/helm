@@ -118,8 +118,13 @@ prefixed with `helm-command-prefix-key` (default to `C-x c`).
 To discover more helm commands run `helm all commands`
 (helm-execute-helm-command) from the menu. Or run helm-M-x (`helm-command-prefix-key` `M-x`) and type helm.
 
-When you like a command, e.g `helm-command-prefix-key` `M-x` you should bind it to something
-more convenient like M-x to replace the Emacs original keybinding.
+Typing `helm-command-prefix-key` before a normal command like `M-x`
+will run the helm version of that command: `helm-M-x`. If you prefer
+the helm version of a command, you should bind it to something more
+convenient like `M-x`. To replace the Emacs original keybinding, paste
+this in your init.el:
+
+    (global-set-key (kbd "M-x") 'helm-M-x)
 
 # Helm Find Files
 
@@ -130,8 +135,8 @@ described in this section.
 You can find it in the menu under `helm-command-prefix-key` or
  as the keychain `C-x C-f`.
 
-If you like it, you can safely bind it to C-x C-f to replace the
-standard find-file:
+If you prefer the helm version of the file finder, you can bind it to
+C-x C-f to replace the standard find-file:
 
     (global-set-key (kbd "C-x C-f") 'helm-find-files)
 
@@ -142,11 +147,11 @@ of the last visited directories.
 
 ## Navigation
 
- Helm-find-files is not by default on / but on
-default-directory or thing-at-point as it uses ffap. If you are on a url,
-a mail adress etc.. it will do the right thing.
+ Helm-find-files does not start your working directory at / but on
+default-directory or thing-at-point which it gets from ffap. If you
+are on a url, a mail address, etc... it will do the right thing.
 
-So helm-find-files work like find-file (C-x C-f), but if you use it with
+`helm-find-files` works like find-file (C-x C-f), but if you use it with
 helm-match-plugin.el, you have to add a space and then the next part of
 pattern you want to match:
 
@@ -164,21 +169,25 @@ Example:
     Find Files or url: ~/ el$
     Will show all what finish with el
 
-You can move in the helm buffer with C-n C-p or arrow keys, when you are
-on a file, you can hit C-z to show only this file-name in the helm
-buffer. On a directory, C-z will switch to this directory to continue
-searching in it. On a symlink C-z will expand to the true name of
-symlink.(moving your mouse cursor over a symlink will show the true name
-of it).
+    
+Inside the `helm-find-files` buffer, you can move your selected row up
+or down with C-n C-p or arrow keys. When a row is selected, `C-z` performs the
+default action, which is different depending on the context.
+
+When you are on a file, `C-z` will show only this file-name in the
+helm buffer. On a directory, `C-z` will step down into this directory
+to continue searching in it. On a symlink, `C-z` will expand to the
+true name of symlink (moving your mouse cursor over a symlink will
+also show the true name).
 
 So it is quite easy to navigate in your files with helm-find-files.
 
-Forget to mention C-. that go to root of current dir or to precedent
-level of dir. So for example you can hit C-z and then come back
-immediatly where you were with C-. instead of erasing minibuffer input
-with DEL. On non graphic display, it is bound to C-l.
- If `helm-ff-lynx-style-map` is non–nil, you will be able to use `left`
-instead of C-l and `right` instead of C-z.
+C-. will navigate to the root of current dir or to precedent level of
+dir. A common operation is to hit C-z and then return immediately where
+you were with C-. instead of erasing minibuffer input with DEL. On
+non-graphic displays, it is bound to C-l. If `helm-ff-lynx-style-map`
+is non–nil, you will be able to use `left` instead of C-l and `right`
+instead of C-z.
 
 ## Jump with nth commands
 
@@ -552,7 +561,7 @@ menu also, in the tool section.
  If you want to save the results of your grep
 session, doing `C-x C-s` will save your grep results in a `helm-grep-mode` buffer.
 
-NOTE: You can save differents named helm grep buffers.
+_NOTE:_ You can save differents named helm grep buffers.
       If you haven't saved your grep session in a named buffer, you can anyway retrieve
       the last session with `helm-resume`.
 
@@ -565,11 +574,17 @@ Saving this buffer will apply changes to corresponding files.
 
 Features:
 
--   You can use prefix arguments before or during M-x session
+-   You can use prefix arguments during M-x session and they are shown in `mode-line`.
 
 -   C-z is a toggle documentation for this command
 
 -   The key binding of command are shown.
+
+-   Smart sorting.
+
+_NOTE:_Prefix args passed before calling `helm-M-x` have no effects.
+Passing the prefix args AFTER calling `helm-M-x` allow you to read the documentation
+of the command you want to run and know exactly what effect they have.
 
 # Helm regexp
 
@@ -749,24 +764,32 @@ Example:
 
 I want to show all my buffer that are in emacs-lisp mode:
 
-    Pattern: lisp
+    Pattern: *lisp
 
 will show all emacs-lisp and lisp related buffers.
 
-Now I want to limit these buffers to the one that match `any`
+Now I want to limit these buffers to the one that start with `helm`
 
-    Pattern: lisp any
+    Pattern: *lisp ^helm
 
-Now I want to limit these buffers to the one that match `any` but end with `foo`:
+Now I want to limit these buffers to the one that match `helm` but end with `foo`:
 
-    Pattern: lisp any foo
+    Pattern: *lisp helm foo
 
-Note the space between any and foo.
+Note the space between `helm` and `foo`.
 
-I want to match buffers that match `any` but not limited to lisp
+Now match buffers that are in `emacs-lisp-mode` and `sh-mode` or `shell-mode`:
+
+    Pattern: *lisp,sh
+
+You can use also negation to match all but `lisp` and `info` buffers:
+
+    Pattern: *!lisp,!info
+
+I want to match buffers that match `helm` but not limited to lisp
 buffers:
 
-    Pattern: any
+    Pattern: helm
 
 ## Different colors for buffers
 
@@ -802,6 +825,9 @@ Not complete.
  `helm-mode` will enable
 helm completion in all Emacs commands using `completing-read` or `read-file-name`.
 
+Starting with emacs-24.4 `helm-mode` provide also completion with `completion-at-point`
+and `completing-read-multiple`.
+
  To use it:
 
     M-x helm-mode
@@ -810,10 +836,36 @@ Turn it on in `init.el` with:
 
     (helm-mode 1)
 
-Customize with:
- `helm-completing-read-handlers-alist`
+## Customize how helm-mode behave
+
+You can disable or change the completion interface you want to use for a specific command by
+customizing `helm-completing-read-handlers-alist`.
 
 See C-h v `helm-completing-read-handlers-alist` for more infos.
+
+### Use helm-mode and ido-mode
+
+If you like ido for some commands and helm for other commands, you should not enable `ido-mode`,
+instead customize `helm-completing-read-handlers-alist`; For example, you want `ido-mode`
+for `find-file-read-only` and `helm-mode` for `find-file`:
+1) In your config you turn on `helm-mode`.
+2) In customize-group `helm-mode` add to `helm-completing-read-handlers-alist`
+`find-file-read-only` as key and `ido` as value.
+In elisp it looks like this:
+     (find-file-read-only . ido)
+
+That's it, now `find-file-read-only` is now using ido an `find-file` (because you did nothing)
+is using `helm-mode`.
+
+Now you want `find-alternate-file` to not use ido and to not use helm, only the vanilla emacs
+completion:
+Add an entry to `helm-completing-read-handlers-alist` like this:
+     (find-alternate-file . nil)
+
+_NOTE:_
+Even if `helm-mode` is enabling helm completion for most emacs commands, you have better time
+to use a native helm command which will be more featured, if this one is provided.
+(e.g use `helm-M-x` for `M-x` even if enabling `helm-mode` provide helm completion in regular emacs `M-x`.)
 
 Not complete.
 
@@ -833,10 +885,32 @@ is to enable it with helm support.
 
 Now when hitting `TAB`, you should have helm pcompletion.
 
+## Fix completion after SUDO.
+
+In eshell when you use sudo, there is no completion on the command you enter
+after sudo, this is true in shell also with or without helm.
+To fix this problem, you can define a `pcomplete/sudo`  function and put it in your configuration.
+
+    (defun pcomplete/sudo ()
+      (let ((prec (pcomplete-arg 'last -1)))
+        (cond ((string= "sudo" prec)
+               (while (pcomplete-here*
+                        (funcall pcomplete-command-completion-function)
+                        (pcomplete-arg 'last) t))))))
+
+
+However this an incomplete definition of `pcomplete/sudo` which will not work in some case
+without modifications to some emacs functions due to bugs unresolved in emacs, to fix this
+you can use my [pcomplete-extension](https://github.com/thierryvolpiatto/emacs-tv-config/blob/master/pcomplete-extension.el)
+which will provide more completions working well with helm like `apt-get` or `find`.
+
 ## Write your own pcomplete functions
 
 You can enhance Emacs pcomplete by writing your own pcomplete
 functions.
+
+See [pcomplete-extension](https://github.com/thierryvolpiatto/emacs-tv-config/blob/master/pcomplete-extension.el)
+For more enhanced completions.
 
  Here an example with `find` command:
 
@@ -877,15 +951,24 @@ functions.
 
 Add this to `init.el`
 
->     (add-hook 'eshell-mode-hook
->               #'(lambda ()
->                   (define-key eshell-mode-map
->                     (kbd "M-p")
->                     'helm-eshell-history)))
+     (add-hook 'eshell-mode-hook
+               #'(lambda ()
+                   (define-key eshell-mode-map
+                     (kbd "M-p")
+                     'helm-eshell-history)))
+
+# Completion in emacs shell
+
+Completion in emacs `shell` is using `completion-at-point`, `helm-mode` provide completion for this
+starting from emacs-24.4 and is not available in emacs-24.3.
+Same as above, you should use [pcomplete-extension](https://github.com/thierryvolpiatto/emacs-tv-config/blob/master/pcomplete-extension.el)
+to have a better experience.
 
 # Usefuls extensions
 
- Not complete.
+If you are using git, I suggest you use [helm-ls-git](https://github.com/emacs-helm/helm-ls-git)
+
+Not complete.
 
 # Usefuls links
 
