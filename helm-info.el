@@ -1,6 +1,6 @@
-;;; helm-info.el --- Browse info index with helm
+;;; helm-info.el --- Browse info index with helm -*- lexical-binding: t -*-
 
-;; Copyright (C) 2012 ~ 2013 Thierry Volpiatto <thierry.volpiatto@gmail.com>
+;; Copyright (C) 2012 ~ 2014 Thierry Volpiatto <thierry.volpiatto@gmail.com>
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
 
 ;;; Code:
 
-(eval-when-compile (require 'cl))
+(require 'cl-lib)
 (require 'helm)
 (require 'helm-plugin)
 (require 'helm-net)
@@ -50,18 +50,18 @@ Arg SOURCE will be an existing helm source named
 Sources are generated for all entries of `helm-default-info-index-list'.
 If COMMANDS arg is non--nil build also commands named `helm-info<NAME>'.
 Where NAME is one of `helm-default-info-index-list'."
-  (loop with symbols = (loop for str in var-value
-                             collect
-                             (intern (concat "helm-source-info-" str)))
-        for sym in symbols
-        for str in var-value
-        do (set sym (list (cons 'name (format "Info index: %s" str))
-                          (cons 'info-index str)))
-        when commands
-        do (let ((com (intern (concat "helm-info-" str))))
-             (helm-build-info-index-command
-              com (format "Predefined helm for %s info." str)
-              sym (format "*helm info %s*" str)))))
+  (cl-loop with symbols = (cl-loop for str in var-value
+                                   collect
+                                   (intern (concat "helm-source-info-" str)))
+           for sym in symbols
+           for str in var-value
+           do (set sym (list (cons 'name (format "Info index: %s" str))
+                             (cons 'info-index str)))
+           when commands
+           do (let ((com (intern (concat "helm-info-" str))))
+                (helm-build-info-index-command
+                 com (format "Predefined helm for %s info." str)
+                 sym (format "*helm info %s*" str)))))
 
 (defun helm-info-index-set (var value)
   (set var value)
@@ -82,6 +82,15 @@ Where NAME is one of `helm-default-info-index-list'."
   :group 'helm-info
   :type  '(repeat (choice string))
   :set   'helm-info-index-set)
+
+(defcustom helm-info-default-sources
+  '(helm-source-info-elisp
+    helm-source-info-cl
+    helm-source-info-eieio
+    helm-source-info-pages)
+  "The default sources to use in `helm-info-at-point'."
+  :group 'helm-info
+  :type '(repeat (choice symbol)))
 
 
 ;;; Info pages
@@ -121,10 +130,7 @@ With a prefix-arg insert symbol at point."
   (interactive)
   (let ((helm-google-suggest-default-function
          'helm-google-suggest-emacs-lisp))
-    (helm :sources '(helm-source-info-elisp
-                     helm-source-info-cl
-                     helm-source-info-pages
-                     helm-source-google-suggest)
+    (helm :sources helm-info-default-sources
           :buffer "*helm info*")))
 
 (provide 'helm-info)

@@ -1,6 +1,6 @@
-;;; helm-locate.el --- helm interface for locate.
+;;; helm-locate.el --- helm interface for locate. -*- lexical-binding: t -*-
 
-;; Copyright (C) 2012 ~ 2013 Thierry Volpiatto <thierry.volpiatto@gmail.com>
+;; Copyright (C) 2012 ~ 2014 Thierry Volpiatto <thierry.volpiatto@gmail.com>
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
 
 ;;; Code:
 
-(eval-when-compile (require 'cl))
+(require 'cl-lib)
 (require 'helm)
 
 
@@ -174,7 +174,7 @@ See `helm-locate-with-db' and `helm-locate'."
   "Setup `helm-locate-command' if not already defined."
   (unless helm-locate-command
     (setq helm-locate-command
-          (case system-type
+          (cl-case system-type
             (gnu/linux "locate %s -r %s")
             (berkeley-unix "locate %s %s")
             (windows-nt "es %s %s")
@@ -198,9 +198,9 @@ See also `helm-locate'."
                       (mapconcat 'identity
                                  ;; Remove eventually
                                  ;; marked directories by error.
-                                 (loop for i in db
-                                       unless (file-directory-p i)
-                                       collect i) ":"))
+                                 (cl-loop for i in db
+                                          unless (file-directory-p i)
+                                          collect i) ":"))
               helm-locate-command)
              helm-locate-command)))
     (setq helm-file-name-history (mapcar 'helm-basename file-name-history))
@@ -212,8 +212,8 @@ See also `helm-locate'."
 
 (defun helm-locate-init ()
   "Initialize async locate process for `helm-source-locate'."
-  (let* ((locate-is-es (string-match "^es" helm-locate-command))
-         (real-locate (string-match "^locate" helm-locate-command))
+  (let* ((locate-is-es (string-match "\\`es" helm-locate-command))
+         (real-locate (string-match "\\`locate" helm-locate-command))
          (case-sensitive-flag (if locate-is-es "-i" ""))
          (ignore-case-flag (if (or locate-is-es
                                    (not real-locate)) "" "-i"))
@@ -223,7 +223,7 @@ See also `helm-locate'."
         (start-process-shell-command
          "locate-process" helm-buffer
          (format helm-locate-command
-                 (case helm-locate-case-fold-search
+                 (cl-case helm-locate-case-fold-search
                    (smart (let ((case-fold-search nil))
                             (if (string-match "[A-Z]" helm-pattern)
                                 case-sensitive-flag
@@ -239,7 +239,7 @@ See also `helm-locate'."
                   (mapconcat 'identity (cdr args) " "))))
       (set-process-sentinel
        (get-buffer-process helm-buffer)
-       #'(lambda (process event)
+       #'(lambda (_process event)
            (if (string= event "finished\n")
                (with-helm-window
                  (setq mode-line-format
@@ -254,10 +254,22 @@ See also `helm-locate'."
                (helm-log "Error: Locate %s"
                          (replace-regexp-in-string "\n" "" event))))))))
 
+(defun helm-locate-pattern-transformer (pattern)
+  "Replace spaces in PATTERN with \".*\".
+Don't affect space at end of PATTERN preceding a possible locate option.
+Do nothing when `helm-locate-command' is 'es'."
+  (if (and (string-match
+            " " (replace-regexp-in-string
+                 " -[a-z]\\'" "" pattern))
+           (not (string-match-p "\\`es" helm-locate-command)))
+      (replace-match ".*" nil t pattern)
+      pattern))
+
 (defvar helm-source-locate
   `((name . "Locate")
     (init . helm-locate-set-command)
     (candidates-process . helm-locate-init)
+    (pattern-transformer . helm-locate-pattern-transformer)
     (type . file)
     (requires-pattern . 3)
     (history . ,'helm-file-name-history)
@@ -265,8 +277,7 @@ See also `helm-locate'."
     (help-message . helm-generic-file-help-message)
     (candidate-number-limit . 9999)
     (no-matchplugin)
-    (mode-line . helm-generic-file-mode-line-string)
-    (delayed))
+    (mode-line . helm-generic-file-mode-line-string))
   "Find files matching the current input pattern with locate.")
 
 ;;;###autoload
@@ -281,9 +292,9 @@ See also `helm-locate'."
                 (candidate-transformer . (helm-skip-boring-files
                                           helm-highlight-files))
                 (candidate-number-limit . 9999)
-                (no-matchplugin)
-                (delayed))))
+                (no-matchplugin))))
     (or (helm :sources src
+              :prompt prompt
               :buffer "*helm locate read fname*"
               :resume 'noresume)
         (keyboard-quit))))

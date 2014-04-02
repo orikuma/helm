@@ -1,6 +1,6 @@
-;;; helm-color.el --- colors and faces
+;;; helm-color.el --- colors and faces -*- lexical-binding: t -*-
 
-;; Copyright (C) 2012 ~ 2013 Thierry Volpiatto <thierry.volpiatto@gmail.com>
+;; Copyright (C) 2012 ~ 2014 Thierry Volpiatto <thierry.volpiatto@gmail.com>
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ;;; Code:
-(eval-when-compile (require 'cl))
+(require 'cl-lib)
 (require 'helm)
 
 ;;; Customize Face
@@ -25,7 +25,7 @@
 (defun helm-custom-faces-init ()
   "Initialize buffer for `helm-source-customize-face'."
   (unless (helm-candidate-buffer)
-    (save-window-excursion
+    (save-selected-window
       (list-faces-display)
       (message nil))
     (helm-init-candidates-in-buffer
@@ -54,7 +54,7 @@
 ;;
 (defun helm-colors-init ()
   (unless (helm-candidate-buffer)
-    (save-window-excursion
+    (save-selected-window
       (list-colors-display)
       (message nil))
     (helm-init-candidates-in-buffer
