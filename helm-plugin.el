@@ -112,7 +112,7 @@
                            (t orig-init))))
         (candidates-in-buffer)
         ,@source)
-      source))
+    source))
 (add-to-list 'helm-compile-source-functions 'helm-compile-source--candidates-file)
 
 (defun helm-p-candidates-file-init ()
@@ -145,15 +145,6 @@
 ;;; Plug-in: `headline'
 ;;
 ;;
-;; Le Wang: Note on how `helm-head-line-get-candidates' works with a list
-;; of regexps.
-;;
-;;   1. Create list of ((title . start-of-match) . hiearchy)
-;;   2. Sort this list by start-of-match.
-;;   3. Go through sorted list and return titles that reflect full hiearchy.
-;;
-;; It's quite brilliantly written.
-;;
 (defun helm-compile-source--helm-headline (source)
   (if (assoc-default 'headline source)
       (append '((init . helm-headline-init)
@@ -162,7 +153,7 @@
               source
               '((candidates-in-buffer)
                 (persistent-help . "Show this line")))
-      source))
+    source))
 (add-to-list 'helm-compile-source-functions 'helm-compile-source--helm-headline)
 
 (defun helm-headline-init ()
@@ -190,47 +181,47 @@
                  (if (numberp subexp)
                      (cons (match-string-no-properties subexp)
                            (match-beginning subexp))
-                     (cons (buffer-substring (point-at-bol) (point-at-eol))
-                           (point-at-bol)))))
+                   (cons (buffer-substring (point-at-bol) (point-at-eol))
+                         (point-at-bol)))))
             (arrange
              #'(lambda (headlines)
                  (unless (null headlines) ; FIX headlines empty bug!
                    (cl-loop with curhead = (make-vector
                                             (1+ (cl-loop for (_ . hierarchy) in headlines
-                                                         maximize hierarchy))
+                                                      maximize hierarchy))
                                             "")
-                            for ((str . pt) . hierarchy) in headlines
-                            do (aset curhead hierarchy str)
-                            collecting
-                            (cons
-                             (format "H%d:%s" (1+ hierarchy)
-                                     (mapconcat 'identity
-                                                (cl-loop for i from 0 to hierarchy
-                                                         collecting (aref curhead i))
-                                                " / "))
-                             pt))))))
+                         for ((str . pt) . hierarchy) in headlines
+                         do (aset curhead hierarchy str)
+                         collecting
+                         (cons
+                          (format "H%d:%s" (1+ hierarchy)
+                                  (mapconcat 'identity
+                                             (cl-loop for i from 0 to hierarchy
+                                                   collecting (aref curhead i))
+                                             " / "))
+                          pt))))))
         (if (listp regexp)
             (funcall arrange
                      (sort
                       (cl-loop for re in regexp
-                               for hierarchy from 0
-                               do (goto-char (point-min))
-                               appending
-                               (cl-loop
-                                while (re-search-forward re nil t)
-                                collect (cons (funcall matched) hierarchy)))
+                            for hierarchy from 0
+                            do (goto-char (point-min))
+                            appending
+                            (cl-loop
+                                  while (re-search-forward re nil t)
+                                  collect (cons (funcall matched) hierarchy)))
                       (lambda (a b) (> (cdar b) (cdar a)))))
-            (cl-loop while (re-search-forward regexp nil t)
-                     collect (funcall matched)))))))
+          (cl-loop while (re-search-forward regexp nil t)
+                collect (funcall matched)))))))
 
 (defun helm-headline-make-candidate-buffer (regexp subexp)
   (with-current-buffer (helm-candidate-buffer 'local)
     (cl-loop for (content . pos) in (helm-headline-get-candidates regexp subexp)
-             do (insert
-                 (format "%5d:%s\n"
-                         (with-helm-current-buffer
-                           (line-number-at-pos pos))
-                         content)))))
+          do (insert
+              (format "%5d:%s\n"
+                      (with-helm-current-buffer
+                        (line-number-at-pos pos))
+                      content)))))
 
 (defun helm-headline-goto-position (pos recenter)
   (goto-char pos)
@@ -260,6 +251,60 @@
                           (or (ignore-errors (caar it))  ""))))
                "")
            " (keeping session)")))
+
+(defun helm-display-to-real-numbered-line (candidate)
+  "This is used to display a line in occur style in helm sources.
+e.g \"    12:some_text\".
+It is used with type attribute 'line'."
+  (if (string-match "^ *\\([0-9]+\\):\\(.*\\)$" candidate)
+      (list (string-to-number (match-string 1 candidate))
+            (match-string 2 candidate))
+    (error "Line number not found")))
+
+
+;;; Type attributes
+;;
+;;
+(define-helm-type-attribute 'line
+    '((display-to-real . helm-display-to-real-numbered-line)
+      (action ("Go to Line" . helm-action-line-goto)))
+  "LINENO:CONTENT string, eg. \"  16:foo\".
+
+Optional `target-file' attribute is a name of target file.
+
+Optional `before-jump-hook' attribute is a function with no
+arguments which is called before jumping to position.
+
+Optional `after-jump-hook' attribute is a function with no
+arguments which is called after jumping to position.
+
+If `adjust' attribute is specified, searches the line whose
+content is CONTENT near the LINENO.
+
+If `recenter' attribute is specified, the line is displayed at
+the center of window, otherwise at the top of window.")
+
+(define-helm-type-attribute 'file-line
+    `((filtered-candidate-transformer helm-filtered-candidate-transformer-file-line)
+      (multiline)
+      (action ("Go to" . helm-action-file-line-goto)))
+  "FILENAME:LINENO:CONTENT string, eg. \"~/.emacs:16:;; comment\".
+
+Optional `default-directory' attribute is a default-directory
+FILENAME is interpreted.
+
+Optional `before-jump-hook' attribute is a function with no
+arguments which is called before jumping to position.
+
+Optional `after-jump-hook' attribute is a function with no
+arguments which is called after jumping to position.
+
+If `adjust' attribute is specified, searches the line whose
+content is CONTENT near the LINENO.
+
+If `recenter' attribute is specified, the line is displayed at
+the center of window, otherwise at the top of window.")
+
 
 ;;; Document new attributes
 ;;
