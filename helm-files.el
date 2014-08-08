@@ -344,6 +344,7 @@ I.e use the -path/ipath arguments of find instead of -name/iname."
     (define-key map (kbd "C-c @")         'helm-ff-run-insert-org-link)
     (helm-define-key-with-subkeys map (kbd "DEL") ?\d 'helm-ff-delete-char-backward
                                   nil nil 'helm-ff-delete-char-backward--exit-fn)
+    (define-key map "\C-h" 'backward-delete-char)
     (when helm-ff-lynx-style-map
       (define-key map (kbd "<left>")      'helm-find-files-up-one-level)
       (define-key map (kbd "<right>")     'helm-execute-persistent-action))
