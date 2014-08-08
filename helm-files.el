@@ -427,9 +427,9 @@ Don't set it directly, use instead `helm-ff-auto-update-initial-value'.")
      . ,(delq
          nil
          `(("Find File" . helm-find-file-or-marked)
-           ("Find file in Dired" . helm-point-file-in-dired)
            ,(and (locate-library "elscreen")
                  '("Find file in Elscreen"  . helm-elscreen-find-file))
+           ("Find file in Dired" . helm-point-file-in-dired)
            ("View file" . view-file)
            ("Checksum File" . helm-ff-checksum)
            ("Query replace on marked" . helm-ff-query-replace-on-marked)

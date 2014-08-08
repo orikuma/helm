@@ -241,14 +241,14 @@ Any other keys pressed run their assigned command defined in MAP and exit the lo
     ;; (define-key map (kbd "<C-tab>")    'undefined)
     (define-key map (kbd "<C-tab>")    'helm-execute-persistent-action)
     ;; Multi keys
-    (define-key map (kbd "C-t")        'helm-toggle-resplit-and-swap-windows)
+    ;; (define-key map (kbd "C-t")        'helm-toggle-resplit-and-swap-windows)
     ;; Debugging command
-    (define-key map (kbd "C-h C-d")    'undefined)
-    (define-key map (kbd "C-h C-d")    'helm-debug-output)
+    ;; (define-key map (kbd "C-h C-d")    'undefined)
+    ;; (define-key map (kbd "C-h C-d")    'helm-debug-output)
     ;; Use `describe-mode' key in `global-map'.
     (define-key map [f1] nil) ; Allow to eval keymap without errors.
-    (define-key map (kbd "C-h C-h")    'undefined)
-    (define-key map (kbd "C-h h")      'undefined)
+    ;; (define-key map (kbd "C-h C-h")    'undefined)
+    ;; (define-key map (kbd "C-h h")      'undefined)
     (cl-dolist (k (where-is-internal 'describe-mode global-map))
       (define-key map k 'helm-help))
     ;; Bind all actions from 1 to 12 to their corresponding nth index+1.
@@ -257,6 +257,16 @@ Any other keys pressed run their assigned command defined in MAP and exit the lo
                `(lambda ()
                   (interactive)
                   (helm-select-nth-action ,n))))
+    ;; for old interface
+    (define-key map (kbd "C-z")
+               `(lambda ()
+                  (interactive)
+                  (helm-select-nth-action 1)))
+    (define-key map (kbd "C-j")
+               `(lambda ()
+                  (interactive)
+                  (helm-select-nth-action 2)))
+    (define-key map (kbd "\C-h") 'backward-delete-char) ;; overwrite C-h by backward-delete-char
     map)
   "Keymap for helm.")
 
