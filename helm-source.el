@@ -708,8 +708,11 @@ like `re-search-forward', see below documentation of :search slot.")
    source 'action
    (helm-make-actions
     "Find file"                            'helm-find-many-files
-    "Find file as root"                    'helm-find-file-as-root
+    (lambda () (and (locate-library "elscreen")
+                    "Display file in Elscreen"))
+    'helm-elscreen-find-file
     "Find file other window"               'find-file-other-window
+    "Find file as root"                    'helm-find-file-as-root
     "Find file other frame"                'find-file-other-frame
     "Open dired in file's directory"       'helm-open-dired
     "Grep File(s) `C-u recurse'"           'helm-find-files-grep
@@ -766,16 +769,16 @@ like `re-search-forward', see below documentation of :search slot.")
   (set-slot-value
    source 'action (helm-make-actions
                    "Switch to buffer(s)" 'helm-switch-to-buffers
-                   (lambda () (and (locate-library "popwin")
-                                   "Switch to buffer in popup window"))
-                   'popwin:popup-buffer
-                   "Switch to buffer(s) other window `C-c o'"
-                   'helm-switch-to-buffers-other-window
-                   "Switch to buffer other frame `C-c C-o'"
-                   'switch-to-buffer-other-frame
                    (lambda () (and (locate-library "elscreen")
                                    "Display buffer in Elscreen"))
                    'helm-find-buffer-on-elscreen
+                   "Switch to buffer(s) other window `C-c o'"
+                   'helm-switch-to-buffers-other-window
+                   (lambda () (and (locate-library "popwin")
+                                   "Switch to buffer in popup window"))
+                   'popwin:popup-buffer
+                   "Switch to buffer other frame `C-c C-o'"
+                   'switch-to-buffer-other-frame
                    "Query replace regexp `C-M-%'"
                    'helm-buffer-query-replace-regexp
                    "Query replace `M-%'" 'helm-buffer-query-replace
