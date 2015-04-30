@@ -8,7 +8,6 @@ welcomed by submitting a Pull Request for [Home.mdpp][1].
 ------
 
 !TOC
-
 # Wiki maintainer instructions
 
 1. Checkout wiki repo at `git@github.com:emacs-helm/helm.wiki.git`
@@ -613,6 +612,42 @@ _NOTE:_ You can save differents named helm grep buffers.
 Editing the `helm-grep-mode` buffer is possible with [Emacs-wgrep](https://github.com/mhayashi1120/Emacs-wgrep).
 Saving this buffer will apply changes to corresponding files.
 
+## Highlighting grep matched results
+
+By default helm have its own implementation to highlight matched items, however it is better to
+use the backend way to highlight result with ANSI sequences e.g:
+
+For ack-grep:
+
+    (setq helm-grep-default-command
+              "ack-grep -Hn --smart-case --no-group %e %p %f"
+              helm-grep-default-recurse-command
+              "ack-grep -H --smart-case --no-group %e %p %f")
+
+For grep:
+
+    (setq helm-grep-default-command
+              "grep --color=always -d skip %e -n%cH -e %p %f"
+              helm-grep-default-recurse-command
+              "grep --color=always -d recurse %e -n%cH -e %p %f")
+
+For git-grep
+
+    (setq helm-ls-git-grep-command
+          "git grep -n%cH --color=always --full-name -e %p %f")
+
+
+The color of git-grep can be customized from global .gitconfig file.
+
+See the docstring of `helm-grep-default-command` for more infos.
+
+NOTE: The non--matched part of the resulting lines in grep will be hidden
+when using "--color=always", to fix this you have to set the env var "GREP_COLORS" for emacs:
+
+    (setenv "GREP_COLORS" "ms=30;43:mc=30;43:sl=01;37:cx=:fn=35:ln=32:bn=32:se=36")
+
+This will colorize in black/yellow matched items.
+
 # Helm M-x
 
  It is bound to `helm-command-prefix-key` `M-x`, you should bind it to `M-x`.
@@ -702,7 +737,33 @@ On Windows you should use Everything program that mimics locate, it is very
 fast and you don't need to update database manually. To use with
 helm-locate, you will need his command line named `es`. Be sure to
 modify the PATH environment variable, to include path to the directory
-that contain `es`.
+that contain `es`. And be sure too that helm-locate-fuzzy-match is unset. Or 
+Everything will not give any results. 
+
+
+# Helm findutils
+
+You can use the `gnu find` command easily from `helm-find-files` when you want
+to search in subdirectories instead of using helm locate, it is bound to `C-c /`
+by default in `helm-find-files`.
+The search with this command is actually performed literally, however you can use a space to
+match multiple pattern within a line.
+
+- Note: In Windows the Gnuw32 version is not working, you will have to install the msys version.
+
+However the msys `find` isn't available as standalone program,
+it can be installed as part of [msys](http://www.mingw.org/wiki/MSYS).
+And msys, by itself, is installed using [mingw installer](http://www.mingw.org/).
+
+So one would need to:
+
+1) [download and install mingw installer from here](http://sourceforge.net/projects/mingw/files/latest/download?source=files)
+
+2) install msys `find` using that installer
+
+3) add msys bin directory to PATH (e.g. "C:\MinGW\msys\1.0\bin")
+
+I believe mingw itself wouldn't be required to be installed, but I might be mistaken.
 
 # Helm Etags
 
@@ -1019,6 +1080,9 @@ Not complete.
 
 You can have infos about helm on Github.
  <https://github.com/emacs-helm/helm>
+ 
+ And a very detailed tutorial about the possibilities of Helm by the user Tuhdo:
+  <http://tuhdo.github.io/helm-intro.html>
 
 You can ask on the helm mailing-list by subscribing at:
  <https://groups.google.com/group/emacs-helm?hl=en>
@@ -1033,3 +1097,84 @@ Or at gmane: [gmane.emacs.helm.user](http://dir.gmane.org/gmane.emacs.helm.user)
 [mental2]: https://github.com/emacs-helm/helm/issues/222
 [mental3]: https://groups.google.com/forum/#!topic/emacs-helm/zaBbg2tFAuM
 
+# FAQ
+## I have updated from melpa and I have errors
+
+Normally since helm, when installed from (m)elpa force dependency to
+[Async](https://github.com/jwiegley/emacs-async) you should not have this problem
+anymore, however if it happen, do like this:
+
+1. Uninstall `helm` and `async` from `list-packages`
+
+2. Close emacs
+
+3. Start `emacs -Q`
+
+4. Reinstall `helm` from `list-packages`
+
+5. Restart emacs
+
+And report bug on [emacs helm issues](https://github.com/emacs-helm/helm/issues)
+
+
+_Note:_ After upgrading as usual you will have anyway to restart emacs for the changes take effect.
+
+_Note:_ [emacs-async](https://github.com/jwiegley/emacs-async) is available as "async" in melpa.
+
+## I have warnings when compiling from emacs-24.3.1
+
+Helm have no warning when compiling with >=emacs-24.4, but when compiling
+with 24.3 you may have many warnings (due to bugs in emacs itself relative
+to lexical-binding and eieio), don't be afraid, just ignore them ;-).
+
+## Void function function-put
+
+Bad installation of helm, please reinstall, See [Here](https://github.com/emacs-helm/helm/wiki#ihaveupdatedfrommelpaandihaveerrors) how to do.
+
+## I have an error message when starting helm-M-x with a prefix arg
+
+Please pass your prefix args AFTER starting helm-M-x.
+Read the embeded documentation for more infos (C-c ?).
+
+## I cannot exit with empty string in completing-read's
+
+The answer is in your mode-line:
+`C-RET` or `M-RET`.
+
+## I want to modify source attributes but source is nil e.g helm-occur
+
+If the source is `nil`, it is probably setup when command starts, and probably
+it is defined using new `helm-make-source` with its own class.
+If the source is defined with a specialized class (not a generic class like
+`helm-source-sync`, `helm-source-async`, `helm-source-in-buffer`, `helm-source-dummy`)
+You can add a new defmethod in your init file e.g:
+
+```emacs-lisp
+(defmethod helm-setup-user-source ((source helm-source-ffiles))
+  (helm-source-add-action-to-source-if
+   "Byte compile file(s) async"
+   'async-byte-compile-file
+   source
+   'helm-ff-candidates-lisp-p))
+```
+or
+
+```emacs-lisp
+(defmethod helm-setup-user-source ((source helm-source-multi-occur))
+  (oset source :follow 1))
+```
+You can also setup the source yourself:
+
+```emacs-lisp
+(with-eval-after-load "helm-regexp.el"
+  (setq helm-source-occur (helm-make-source "Occur" 'helm-source-multi-occur))
+  (setq helm-source-occur (helm-make-source "Moccur" 'helm-source-multi-occur)))
+```
+
+_Note:_ Don't define a new `defmethod` `helm-setup-user-source` with generic classes as specified above.
+
+
+## I can't find help or documentation for helm
+
+In each helm session you will find help with `C-c ?`, it is notified in your `mode-line`.
+All these help pages are regrouped in a org file generated by the command `helm-documentation`.

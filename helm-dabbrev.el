@@ -1,6 +1,6 @@
 ;;; helm-dabbrev.el --- Helm implementation of dabbrev. -*- lexical-binding: t -*-
 
-;; Copyright (C) 2012 ~ 2014 Thierry Volpiatto <thierry.volpiatto@gmail.com>
+;; Copyright (C) 2012 ~ 2015 Thierry Volpiatto <thierry.volpiatto@gmail.com>
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -25,7 +25,10 @@
   :group 'helm)
 
 (defcustom helm-dabbrev-always-search-all t
-  "Always search in all buffers when non--nil."
+  "Always search in all buffers when non--nil.
+Note that even if nil, a search in all buffers
+will occur if the length of candidates is <= than
+`helm-dabbrev-max-length-result'."
   :group 'helm-dabbrev
   :type 'boolean)
 
@@ -43,6 +46,17 @@ Have no effect when `helm-dabbrev-always-search-all' is non--nil."
   :group 'helm-dabbrev
   :type '(repeat regexp))
 
+(defcustom helm-dabbrev-related-buffer-fn #'helm-dabbrev--same-major-mode-p
+  "A function that decide if a buffer to search in is related to `current-buffer'.
+This is actually determined by comparing `major-mode' of the buffer to search
+and the `current-buffer'.
+The function take one arg, the buffer which is current, look at
+`helm-dabbrev--same-major-mode-p' for example.
+
+When nil all buffers are considered related to `current-buffer'."
+  :group 'helm-dabbrev
+  :type 'function)
+
 (defcustom helm-dabbrev-major-mode-assoc
   '((emacs-lisp-mode . lisp-interaction-mode))
   "Major mode association alist.
@@ -50,7 +64,12 @@ This allow helm-dabbrev searching in buffers with the associated `major-mode'.
 e.g \(emacs-lisp-mode . lisp-interaction-mode\)
 will allow searching in the lisp-interaction-mode buffer when `current-buffer'
 is an `emacs-lisp-mode' buffer and vice versa i.e
-no need to provide \(lisp-interaction-mode . emacs-lisp-mode\) association."
+no need to provide \(lisp-interaction-mode . emacs-lisp-mode\) association.
+
+When nil check is the searched buffer have same `major-mode'
+than the `current-buffer'.
+This have no effect when `helm-dabbrev-related-buffer-fn' is nil or of course
+bound to a function that doesn't handle this var."
   :type '(alist :key-type symbol :value-type symbol)
   :group 'helm-dabbrev)
 
@@ -59,7 +78,7 @@ no need to provide \(lisp-interaction-mode . emacs-lisp-mode\) association."
   :group 'helm-dabbrev
   :type 'integer)
 
-(defcustom helm-dabbrev-cycle-thresold nil
+(defcustom helm-dabbrev-cycle-threshold nil
   "Number of time helm-dabbrev cycle before displaying helm completion.
 When nil or 0 disable cycling."
   :group 'helm-dabbrev
@@ -87,7 +106,7 @@ but the initial search for all candidates in buffer(s)."
 (defvar helm-dabbrev--exclude-current-buffer-flag nil)
 (defvar helm-dabbrev--cache nil)
 (defvar helm-dabbrev--data nil)
-(defvar helm-dabbrev--regexp "\\s-\\|\t\\|[(\[\{\"'`=<$;]\\|\\s\\\\|^")
+(defvar helm-dabbrev--regexp "\\s-\\|\t\\|[(\[\{\"'`=<$;]\\|\\s\\\\|^\\|\\.")
 (cl-defstruct helm-dabbrev-info dabbrev limits iterator)
 
 
@@ -157,9 +176,19 @@ but the initial search for all candidates in buffer(s)."
                               (setq pos-before pos)
                               (search-backward pattern pos t))))
                 (let* ((match-1 (helm-aif (thing-at-point 'symbol)
-                                    (substring-no-properties it)))
+                                    ;; `thing-at-point' returns
+                                    ;; the quote outside of e-lisp mode,
+                                    ;; e.g in message mode,
+                                    ;; `foo' => foo'
+                                    ;; but in e-lisp like modes:
+                                    ;; `foo' => foo
+                                    ;; so remove it [1].
+                                    (replace-regexp-in-string
+                                     "[']\\'" "" (substring-no-properties it))))
                        (match-2 (helm-aif (thing-at-point 'filename)
-                                    (substring-no-properties it)))
+                                    ;; Same as in [1].
+                                    (replace-regexp-in-string
+                                     "[']\\'" "" (substring-no-properties it))))
                        (lst (if (string= match-1 match-2)
                                 (list match-1)
                               (list match-1 match-2))))
@@ -172,7 +201,9 @@ but the initial search for all candidates in buffer(s)."
           
           do (with-current-buffer buf
                (when (or minibuf ; check against all buffers when in minibuffer.
-                         (helm-dabbrev--same-major-mode-p buffer1))
+                         (if helm-dabbrev-related-buffer-fn
+                             (funcall helm-dabbrev-related-buffer-fn buffer1)
+                             t))
                  (save-excursion
                    ;; Start searching before thing before point.
                    (goto-char (- (point) (length str)))
@@ -210,17 +241,6 @@ but the initial search for all candidates in buffer(s)."
             (append lst (funcall dabbrev-get abbrev 'all-bufs)))
         lst))))
 
-(defvar helm-source-dabbrev
-  `((name . "Dabbrev Expand")
-    (init . (lambda ()
-              (helm-init-candidates-in-buffer 'global
-                helm-dabbrev--cache)))
-    (candidates-in-buffer)
-    (persistent-action . (lambda (_candidate) (ignore)))
-    (persistent-help . "DoNothing")
-    (keymap . ,helm-dabbrev-map)
-    (action . helm-dabbrev-default-action)))
-
 (defun helm-dabbrev-default-action (candidate)
   (with-helm-current-buffer
     (let* ((limits (helm-bounds-of-thing-before-point
@@ -238,8 +258,8 @@ but the initial search for all candidates in buffer(s)."
   (let ((dabbrev (helm-thing-before-point nil helm-dabbrev--regexp))
         (limits (helm-bounds-of-thing-before-point helm-dabbrev--regexp))
         (enable-recursive-minibuffers t)
-        (cycling-disabled-p (or (null helm-dabbrev-cycle-thresold)
-                                (zerop helm-dabbrev-cycle-thresold)))
+        (cycling-disabled-p (or (null helm-dabbrev-cycle-threshold)
+                                (zerop helm-dabbrev-cycle-threshold)))
         (helm-execute-action-at-once-if-one t)
         (helm-quit-if-no-candidate
          #'(lambda ()
@@ -269,13 +289,13 @@ but the initial search for all candidates in buffer(s)."
                                        collect i into selection
                                        when (and selection
                                                  (= (length selection)
-                                                    helm-dabbrev-cycle-thresold))
+                                                    helm-dabbrev-cycle-threshold))
                                        ;; When selection len reach
-                                       ;; `helm-dabbrev-cycle-thresold'
+                                       ;; `helm-dabbrev-cycle-threshold'
                                        ;; return selection.
                                        return selection
                                        ;; selection len never reach
-                                       ;; `helm-dabbrev-cycle-thresold'
+                                       ;; `helm-dabbrev-cycle-threshold'
                                        ;; return selection.
                                        finally return selection)))))
     (let ((iter (and (helm-dabbrev-info-p helm-dabbrev--data)
@@ -283,7 +303,9 @@ but the initial search for all candidates in buffer(s)."
           deactivate-mark)
       (helm-aif (and iter (helm-iter-next iter))
           (progn
-            (helm-insert-completion-at-point (car limits) (cdr limits) it)
+            (helm-insert-completion-at-point
+             (car (helm-dabbrev-info-limits helm-dabbrev--data))
+             (cdr limits) it)
             ;; Move already tried candidates to end of list.
             (setq helm-dabbrev--cache (append (remove it helm-dabbrev--cache)
                                               (list it))))
@@ -294,7 +316,12 @@ but the initial search for all candidates in buffer(s)."
           (setq helm-dabbrev--data nil)
           (insert dabbrev))
         (with-helm-show-completion (car limits) (cdr limits)
-          (helm :sources 'helm-source-dabbrev
+          (helm :sources (helm-build-in-buffer-source "Dabbrev Expand"
+                           :data helm-dabbrev--cache
+                           :persistent-action 'ignore
+                           :persistent-help "DoNothing"
+                           :keymap helm-dabbrev-map
+                           :action 'helm-dabbrev-default-action)
                 :buffer "*helm dabbrev*"
                 :input (concat "^" dabbrev " ")
                 :resume 'noresume
